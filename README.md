@@ -39,7 +39,7 @@ The tests cover the catalogue page, stylesheet, menu routes, missing-item respon
 Example request:
 
 ```bash
-curl -i -X POST http://localhost:3000/items \
+curl -i -X POST http://localhost:3001/items \
   -H "Content-Type: application/json" \
   -d '{"name":"Masala Dosa","price":60}'
 ```
