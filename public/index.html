@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CampusEats dish catalogue powered by a Node and Express REST API.">
+  <title>CampusEats Catalogue</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="page-header">
+      <p class="eyebrow">CampusEats</p>
+      <h1>CampusEats Catalogue</h1>
+      <p class="sub">The menu is served by a REST API built with Node.js and Express.</p>
+    </header>
+
+    <section class="menu-section" aria-labelledby="menuHeading">
+      <div class="section-heading">
+        <h2 id="menuHeading">Available dishes</h2>
+        <span id="itemCount" class="item-count">Loading menu...</span>
+      </div>
+      <div id="list" class="menu-list" aria-live="polite">
+        <p class="empty-message">Loading menu...</p>
+      </div>
+    </section>
+
+    <section class="form-section" aria-labelledby="formHeading">
+      <h2 id="formHeading">Add a dish</h2>
+      <form id="addForm">
+        <div class="form-fields">
+          <div class="field">
+            <label for="name">Dish name</label>
+            <input id="name" name="name" type="text" placeholder="e.g. Masala Dosa" maxlength="80" required>
+          </div>
+          <div class="field">
+            <label for="price">Price (rupees)</label>
+            <input id="price" name="price" type="number" min="0" step="1" placeholder="e.g. 60">
+          </div>
+        </div>
+        <button id="addButton" type="submit">Add dish</button>
+      </form>
+      <p id="formMessage" class="form-message" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script>
+    const listElement = document.getElementById('list');
+    const itemCountElement = document.getElementById('itemCount');
+    const addForm = document.getElementById('addForm');
+    const addButton = document.getElementById('addButton');
+    const formMessage = document.getElementById('formMessage');
+
+    // GET /items: read the menu and display each dish.
+    async function loadMenu() {
+      listElement.textContent = 'Loading menu...';
+      itemCountElement.textContent = 'Loading menu...';
+
+      try {
+        const response = await fetch('/items');
+        if (!response.ok) {
+          throw new Error('The menu could not be loaded.');
+        }
+
+        const items = await response.json();
+        listElement.replaceChildren();
+        itemCountElement.textContent = `${items.length} ${items.length === 1 ? 'dish' : 'dishes'}`;
+
+        if (items.length === 0) {
+          const emptyMessage = document.createElement('p');
+          emptyMessage.className = 'empty-message';
+          emptyMessage.textContent = 'No dishes have been added yet.';
+          listElement.appendChild(emptyMessage);
+          return;
+        }
+
+        items.forEach((item) => {
+          const card = document.createElement('article');
+          card.className = 'dish';
+
+          const dishName = document.createElement('span');
+          dishName.className = 'dish-name';
+          dishName.textContent = item.name;
+
+          const dishPrice = document.createElement('span');
+          dishPrice.className = 'dish-price';
+          dishPrice.textContent = `₹${item.price}`;
+
+          card.append(dishName, dishPrice);
+          listElement.appendChild(card);
+        });
+      } catch (error) {
+        listElement.textContent = 'Could not load the menu. Check that the server is running and refresh the page.';
+        itemCountElement.textContent = 'Menu unavailable';
+        console.error(error);
+      }
+    }
+
+    // POST /items: send the form values, then refresh the menu.
+    addForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      formMessage.textContent = '';
+      addButton.disabled = true;
+      addButton.textContent = 'Adding...';
+
+      const name = document.getElementById('name').value.trim();
+      const price = document.getElementById('price').value;
+
+      try {
+        const response = await fetch('/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, price })
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'The dish could not be added.');
+        }
+
+        addForm.reset();
+        formMessage.textContent = `${result.name} was added to the menu.`;
+        await loadMenu();
+      } catch (error) {
+        formMessage.textContent = error.message || 'Something went wrong. Please try again.';
+      } finally {
+        addButton.disabled = false;
+        addButton.textContent = 'Add dish';
+      }
+    });
+
+    loadMenu();
+  </script>
+</body>
+</html>
